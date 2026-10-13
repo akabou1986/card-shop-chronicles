@@ -148,9 +148,9 @@ export class GameState {
     this.addLog(`${side.name}が レーン${slotIndex + 1} に [${card.name}] (ATK ${card.atk} / HP ${card.hp}) を召喚！（召喚時レスト）`, 'summon-log');
 
     // 相手の「魔導地雷」トラップ等の召喚時トリガーチェック
-    this.checkTrapsOnSummon(this.getOppositeSideName(sideName), sideName, slotIndex);
+    const trapResult = this.checkTrapsOnSummon(this.getOppositeSideName(sideName), sideName, slotIndex);
 
-    return { success: true, monster: summonedMonster };
+    return { success: true, monster: summonedMonster, trapResult };
   }
 
   /**
@@ -178,9 +178,14 @@ export class GameState {
     };
 
     if (sideName === 'player') {
-      this.addLog(`${side.name}がサポート枠${slotIndex + 1}に [${card.name}] をセットしました。`);
+      const typeLabel = card.type === CARD_TYPES.ENCHANT ? 'エンチャント' : 'トラップ';
+      this.addLog(`${side.name}がサポート枠${slotIndex + 1}に [${card.name}]（${typeLabel}）を配置しました。`);
     } else {
-      this.addLog(`${side.name}がサポート枠にカードをセットしました。`);
+      if (card.type === CARD_TYPES.ENCHANT) {
+        this.addLog(`${side.name}がサポート枠${slotIndex + 1}にエンチャント [${card.name}] を配置しました！`, 'normal');
+      } else {
+        this.addLog(`${side.name}がサポート枠に伏せカードをセットしました。`);
+      }
     }
 
     return { success: true };
@@ -236,7 +241,7 @@ export class GameState {
     const trapSide = this.getSide(trapOwnerName);
     const summonerSide = this.getSide(summonerName);
     const summonedMonster = summonerSide.monsterSlots[slotIndex];
-    if (!summonedMonster) return;
+    if (!summonedMonster) return null;
 
     for (let i = 0; i < 3; i++) {
       const trap = trapSide.supportSlots[i];
@@ -248,14 +253,26 @@ export class GameState {
 
         summonedMonster.currentHp -= trap.value;
         this.addLog(`召喚された [${summonedMonster.name}] に ${trap.value} ダメージ！`, 'attack-log');
-        if (summonedMonster.currentHp <= 0) {
+        const isDestroyed = summonedMonster.currentHp <= 0;
+        if (isDestroyed) {
           this.addLog(`[${summonedMonster.name}] は召喚直後に破壊されました！`, 'attack-log');
           summonerSide.graveyard.push(summonedMonster);
           summonerSide.monsterSlots[slotIndex] = null;
         }
-        break; // 1回で1つ消費
+
+        return {
+          triggered: true,
+          trap,
+          trapSlotIndex: i,
+          trapOwnerName,
+          summonerName,
+          summonSlotIndex: slotIndex,
+          damage: trap.value,
+          isDestroyed
+        };
       }
     }
+    return null;
   }
 
   /**

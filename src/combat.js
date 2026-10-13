@@ -99,6 +99,9 @@ export class CombatResolver {
 
       gs.addLog(`[${defender.name}] に ${attacker.atk} ダメージ！(残HP: ${defender.currentHp}) ／ [${attacker.name}] は反撃により ${defender.atk} ダメージを受けた！(残HP: ${attacker.currentHp})`);
 
+      // ダメージフライテキストが飛び出し、被弾・反撃を視認できる時間を確保
+      await sleep(380);
+
       // 防御側モンスター破壊判定
       if (defender.currentHp <= 0) {
         gs.addLog(`[${defender.name}] は戦闘により撃破されました！`, 'attack-log');
@@ -119,9 +122,12 @@ export class CombatResolver {
       gs.addLog(`【レーン${lane + 1}ダイレクトアタック】対面不在！[${attacker.name}] (ATK ${attacker.atk}) が ${defendingSide.name} へ直接攻撃！`, 'attack-log');
 
       // トラップの自動発動判定 (直接攻撃時)
-      const trapTriggered = this.checkDirectAttackTrap(defendingSideName, attackingSideName, attacker);
+      const trapTriggered = await this.checkDirectAttackTrap(defendingSideName, attackingSideName, attacker, lane);
       if (trapTriggered) {
         // トラップにより攻撃が無効化された場合
+        if (this.anim.onUpdateUI) {
+          this.anim.onUpdateUI();
+        }
         return;
       }
 
@@ -133,6 +139,7 @@ export class CombatResolver {
       }
 
       gs.addLog(`${defendingSide.name} は ${attacker.atk} の直接ダメージを受けた！（残りライフ: ${defendingSide.life}）`, 'attack-log');
+      await sleep(380);
     }
 
     if (this.anim.onUpdateUI) {
@@ -143,7 +150,7 @@ export class CombatResolver {
   /**
    * 直接攻撃時のトラップ自動発動チェック
    */
-  checkDirectAttackTrap(defendingSideName, attackingSideName, attacker) {
+  async checkDirectAttackTrap(defendingSideName, attackingSideName, attacker, lane) {
     const gs = this.gameState;
     const defendingSide = gs.getSide(defendingSideName);
     const attackingSide = gs.getSide(attackingSideName);
@@ -152,6 +159,22 @@ export class CombatResolver {
       const trap = defendingSide.supportSlots[i];
       if (trap && trap.type === 'trap' && trap.trigger === 'on_direct_attack') {
         gs.addLog(`【自動発動トラップ】${defendingSide.name}の伏せカード [${trap.name}] が自動発動！`, 'attack-log');
+
+        // カットイン演出の再生
+        if (this.anim.onTrapTrigger) {
+          const actionText = trap.effect === 'negate_and_reflect'
+            ? `🛡️ 攻撃無効＆反射 ${trap.value}ダメージ！`
+            : `🛡️ 攻撃無効！`;
+          await this.anim.onTrapTrigger({
+            trap,
+            ownerSideName: defendingSideName,
+            slotIndex: i,
+            targetSideName: attackingSideName,
+            targetLane: lane,
+            actionTagText: actionText
+          });
+        }
+
         defendingSide.supportSlots[i] = null;
         defendingSide.graveyard.push(trap);
 

@@ -59,6 +59,15 @@ export class UIManager {
     this.detailCardAtk = document.getElementById('detail-card-atk');
     this.detailCardHp = document.getElementById('detail-card-hp');
     this.btnCloseDetail = document.getElementById('btn-close-detail');
+
+    // トラップ発動カットイン演出用
+    this.trapOverlay = document.getElementById('trap-cutin-overlay');
+    this.trapBadgeText = document.getElementById('trap-cutin-badge-text');
+    this.trapArt = document.getElementById('trap-cutin-art');
+    this.trapOwner = document.getElementById('trap-cutin-owner');
+    this.trapName = document.getElementById('trap-cutin-name');
+    this.trapDesc = document.getElementById('trap-cutin-desc');
+    this.trapActionTag = document.getElementById('trap-cutin-action-tag');
   }
 
   bindStaticEvents() {
@@ -100,17 +109,28 @@ export class UIManager {
       this.onAction('restart');
     });
 
-    // 盤面スロットのクリックイベント（召喚・サポート配置）
+    // 盤面スロットのイベント登録（自軍/敵軍のモンスター枠・サポート枠すべて）
+    const setupSlotEvents = (slotId, side, type, index) => {
+      const slotEl = document.getElementById(slotId);
+      if (!slotEl) return;
+      this.attachLongPress(
+        slotEl,
+        // 長押し時: 盤面カードの詳細モーダル表示
+        () => {
+          this.handleSlotLongPress(side, type, index);
+        },
+        // クリック/タップ時: アクションまたは詳細表示
+        () => {
+          this.handleSlotClick(side, type, index);
+        }
+      );
+    };
+
     for (let i = 0; i < 3; i++) {
-      const pMonsterSlot = document.getElementById(`player-monster-${i}`);
-      pMonsterSlot.addEventListener('click', () => this.handleSlotClick('player', 'monster', i));
-
-      const pSupportSlot = document.getElementById(`player-support-${i}`);
-      pSupportSlot.addEventListener('click', () => this.handleSlotClick('player', 'support', i));
-
-      // 敵モンスタークリック（スペルのターゲット用）
-      const oppMonsterSlot = document.getElementById(`opp-monster-${i}`);
-      oppMonsterSlot.addEventListener('click', () => this.handleSlotClick('opponent', 'monster', i));
+      setupSlotEvents(`player-monster-${i}`, 'player', 'monster', i);
+      setupSlotEvents(`player-support-${i}`, 'player', 'support', i);
+      setupSlotEvents(`opp-monster-${i}`, 'opponent', 'monster', i);
+      setupSlotEvents(`opp-support-${i}`, 'opponent', 'support', i);
     }
   }
 
@@ -197,18 +217,55 @@ export class UIManager {
   }
 
   /**
-   * スロットクリック処理
+   * スロット長押し処理（詳細モーダル表示）
    */
-  handleSlotClick(side, type, index) {
-    if (this.gs.isGameOver || this.gs.activePlayer !== 'player' || this.gs.phase !== 'main') {
+  handleSlotLongPress(side, type, index) {
+    const sideObj = this.gs.getSide(side);
+    const existingCard = type === 'monster' ? sideObj.monsterSlots[index] : sideObj.supportSlots[index];
+    if (!existingCard) return;
+
+    // 相手のトラップは伏せカードなので非公開
+    if (side === 'opponent' && type === 'support' && existingCard.type === 'trap') {
+      if (this.handHintText) {
+        this.handHintText.textContent = '相手の伏せカード（トラップ）です（内容は非公開です）';
+      }
       return;
     }
 
-    // すでにモンスターやサポートがいる場合は詳細表示
+    // 味方カード全般、敵モンスター、および敵エンチャントは詳細モーダルを表示！
+    this.showCardDetail(existingCard);
+  }
+
+  /**
+   * スロットクリック処理（配置・対象選択・詳細表示）
+   */
+  handleSlotClick(side, type, index) {
     const sideObj = this.gs.getSide(side);
     const existingCard = type === 'monster' ? sideObj.monsterSlots[index] : sideObj.supportSlots[index];
-    if (existingCard && !this.selectedHandCard) {
+
+    // 手札のダメージスペルが敵モンスターを狙っているか
+    const isSpellTargetingMonster =
+      this.selectedHandCard &&
+      this.selectedHandCard.type === CARD_TYPES.SPELL &&
+      this.selectedHandCard.spellType === 'damage_monster' &&
+      side === 'opponent' &&
+      type === 'monster';
+
+    // 盤面カードが存在し、かつスペル攻撃の対象でない場合は詳細表示
+    if (existingCard && !isSpellTargetingMonster) {
+      if (side === 'opponent' && type === 'support' && existingCard.type === 'trap') {
+        if (this.handHintText) {
+          this.handHintText.textContent = '相手の伏せカード（トラップ）です（内容は非公開です）';
+        }
+        return;
+      }
+      // 味方カード、敵モンスター、および敵エンチャントは詳細モーダルを表示！
       this.showCardDetail(existingCard);
+      return;
+    }
+
+    // プレイヤーのメインフェイズ以外は配置・詠唱アクションを行わない
+    if (this.gs.isGameOver || this.gs.activePlayer !== 'player' || this.gs.phase !== 'main') {
       return;
     }
 
@@ -291,8 +348,10 @@ export class UIManager {
 
     // プレイヤー
     this.playerLifeText.textContent = `${Math.max(0, p.life)} / ${p.maxLife}`;
-    const pLifePercent = Math.max(0, Math.min(100, (p.life / p.maxLife) * 100));
-    this.playerLifeBar.style.width = `${pLifePercent}%`;
+    if (this.playerLifeBar) {
+      const pLifePercent = Math.max(0, Math.min(100, (p.life / p.maxLife) * 100));
+      this.playerLifeBar.style.width = `${pLifePercent}%`;
+    }
     this.playerManaText.textContent = `${p.mana} / ${p.maxMana}`;
     this.playerHandCount.textContent = p.hand.length;
     this.playerDeckCount.textContent = p.deck.length;
@@ -300,8 +359,10 @@ export class UIManager {
 
     // 相手
     this.opponentLifeText.textContent = `${Math.max(0, opp.life)} / ${opp.maxLife}`;
-    const oppLifePercent = Math.max(0, Math.min(100, (opp.life / opp.maxLife) * 100));
-    this.opponentLifeBar.style.width = `${oppLifePercent}%`;
+    if (this.opponentLifeBar) {
+      const oppLifePercent = Math.max(0, Math.min(100, (opp.life / opp.maxLife) * 100));
+      this.opponentLifeBar.style.width = `${oppLifePercent}%`;
+    }
     this.opponentManaText.textContent = `${opp.mana} / ${opp.maxMana}`;
     this.opponentHandCount.textContent = opp.hand.length;
     this.opponentDeckCount.textContent = opp.deck.length;
@@ -344,6 +405,9 @@ export class UIManager {
     const slot = document.getElementById(slotId);
     if (!slot) return;
 
+    // 現在アニメーション中のフライテキスト（ダメージ数字等）を退避
+    const activeFloatings = Array.from(slot.querySelectorAll('.floating-damage'));
+
     if (!cardData) {
       // 空スロットのプレースホルダー
       if (slotType === 'monster') {
@@ -352,6 +416,7 @@ export class UIManager {
       } else {
         slot.innerHTML = `<span class="slot-placeholder">${owner === 'player' ? 'Trap / Support' : '伏せカード枠'}</span>`;
       }
+      activeFloatings.forEach(f => slot.appendChild(f));
       return;
     }
 
@@ -375,18 +440,40 @@ export class UIManager {
       `;
     } else {
       // サポート枠（トラップ/エンチャント）
+      // 企画書ルール: エンチャントは相手側でも公開情報、トラップのみが伏せカード
       const isOpponent = owner === 'opponent';
-      const cardTypeClass = cardData.type === 'enchant' ? 'card-type-enchant' : 'card-type-trap';
+      const isSecretTrap = isOpponent && cardData.type === 'trap';
+      const isEnchant = cardData.type === 'enchant';
+      const cardTypeClass = isEnchant ? 'card-type-enchant' : 'card-type-trap';
+
+      const costText = isSecretTrap ? '?' : cardData.cost;
+      const nameText = isSecretTrap ? '伏せカード' : cardData.name;
+      const iconText = isSecretTrap ? '🔒' : (cardData.emoji || (isEnchant ? '🌿' : '🔒'));
+      const titleText = isSecretTrap
+        ? '相手の伏せカード（トラップ）'
+        : `${cardData.name} (コスト:${cardData.cost}) [${isEnchant ? 'エンチャント' : 'トラップ'}]\n${cardData.desc}\n※タップまたは長押しで拡大詳細`;
+
       slot.innerHTML = `
-        <div class="card-view support-card-view ${cardTypeClass}" title="${isOpponent ? '相手の伏せカード' : `${cardData.name} (コスト:${cardData.cost})\n${cardData.desc}`}">
+        <div class="card-view support-card-view ${cardTypeClass}" title="${titleText}">
           <div class="card-header-bar">
-            <span class="card-cost-badge">${isOpponent ? '?' : cardData.cost}</span>
-            <span class="card-name-text">${isOpponent ? '伏せカード' : cardData.name}</span>
-            <span class="card-type-icon">${isOpponent ? '🔒' : cardData.emoji}</span>
+            <span class="card-cost-badge">${costText}</span>
+            <span class="card-name-text">${nameText}</span>
+            <span class="card-type-icon">${iconText}</span>
+          </div>
+          <div class="card-visual-frame" style="display:flex; justify-content:center; align-items:center; flex:1;">
+            <span class="card-art-emoji" style="font-size: 1.15rem;">${iconText}</span>
+          </div>
+          <div class="card-stats-footer">
+            <span style="font-size: 0.55rem; color: ${isEnchant ? '#06d6a0' : '#ef233c'}; width: 100%; text-align: center; font-weight: 800;">
+              ${isSecretTrap ? '🔒TRAP' : isEnchant ? '🌿ENCHANT' : '🔒TRAP'}
+            </span>
           </div>
         </div>
       `;
     }
+
+    // 退避したフライテキストをDOMに戻す
+    activeFloatings.forEach(f => slot.appendChild(f));
   }
 
   /**
@@ -586,5 +673,65 @@ export class UIManager {
     hud.appendChild(floatNum);
 
     setTimeout(() => floatNum.remove(), 800);
+  }
+
+  /**
+   * トラップ発動カットイン演出の再生
+   * @param {Object} data { trap, ownerSideName, slotIndex, targetSideName, targetLane, actionTagText }
+   */
+  async playTrapCutin({ trap, ownerSideName, slotIndex, targetSideName, targetLane, actionTagText }) {
+    if (!trap) return;
+
+    const isPlayerTrap = ownerSideName === 'player';
+    const ownerLabel = isPlayerTrap ? '👑 プレイヤーの伏せカードが発動！' : '💀 相手の伏せカードが作動！';
+
+    this.trapOwner.textContent = ownerLabel;
+    this.trapOwner.style.color = isPlayerTrap ? '#00d2ff' : '#ff758f';
+    this.trapBadgeText.textContent = isPlayerTrap ? 'YOUR TRAP ACTIVATED!' : 'ENEMY TRAP TRIGGERED!';
+    this.trapArt.textContent = trap.emoji || '🔒';
+    this.trapName.textContent = trap.name;
+    this.trapDesc.textContent = trap.desc;
+    this.trapActionTag.textContent = actionTagText || '🛡️ トラップ効果発動！';
+
+    // 発動したスロット（サポート枠）を激しく赤色発光させる
+    const slotId = ownerSideName === 'player' ? `player-support-${slotIndex}` : `opp-support-${slotIndex}`;
+    const supportSlotEl = document.getElementById(slotId);
+    if (supportSlotEl) {
+      supportSlotEl.classList.add('trap-activating');
+    }
+
+    // オーバーレイ表示
+    this.trapOverlay.classList.add('active');
+
+    // 1.3秒間プレイヤーにしっかり提示
+    await new Promise(r => setTimeout(r, 1300));
+
+    // オーバーレイ非表示
+    this.trapOverlay.classList.remove('active');
+    if (supportSlotEl) {
+      supportSlotEl.classList.remove('trap-activating');
+    }
+
+    // 対象モンスター枠にリアクション表示
+    if (targetSideName && targetLane !== undefined && targetLane !== null) {
+      const targetSlotId = targetSideName === 'player' ? `player-monster-${targetLane}` : `opp-monster-${targetLane}`;
+      const targetSlotEl = document.getElementById(targetSlotId);
+      if (targetSlotEl) {
+        targetSlotEl.classList.add('shake-effect');
+        setTimeout(() => targetSlotEl.classList.remove('shake-effect'), 400);
+
+        // ガード / 反射ダメージフロート
+        const floatTag = document.createElement('div');
+        floatTag.className = 'floating-damage';
+        floatTag.style.color = '#ffb703';
+        floatTag.style.fontSize = '0.82rem';
+        floatTag.style.whiteSpace = 'nowrap';
+        floatTag.textContent = actionTagText || '💥 TRAP HIT!';
+        targetSlotEl.appendChild(floatTag);
+        setTimeout(() => floatTag.remove(), 900);
+      }
+    }
+
+    await new Promise(r => setTimeout(r, 300));
   }
 }

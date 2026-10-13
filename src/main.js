@@ -28,6 +28,9 @@ function initGame() {
     onDirectAttackDamage: (defendingSide, amount) => {
       ui.playDirectDamage(defendingSide, amount);
     },
+    onTrapTrigger: async (data) => {
+      await ui.playTrapCutin(data);
+    },
     onUpdateUI: () => {
       ui.render();
     },
@@ -36,9 +39,13 @@ function initGame() {
     }
   };
 
-  combatResolver = new CombatResolver(gameState, animationCallbacks);
-  opponentAI = new OpponentAI(gameState, () => ui.render());
   ui = new UIManager(gameState, handleUserAction);
+  combatResolver = new CombatResolver(gameState, animationCallbacks);
+  opponentAI = new OpponentAI(
+    gameState,
+    () => ui.render(),
+    async (trapData) => await ui.playTrapCutin(trapData)
+  );
 
   ui.render();
 }
@@ -54,8 +61,20 @@ async function handleUserAction(action, data) {
       const res = gameState.summonMonster('player', data.cardUid, data.slotIndex);
       if (!res.success) {
         alert(res.reason);
+      } else {
+        ui.render();
+        if (res.trapResult && res.trapResult.triggered) {
+          await ui.playTrapCutin({
+            trap: res.trapResult.trap,
+            ownerSideName: res.trapResult.trapOwnerName,
+            slotIndex: res.trapResult.trapSlotIndex,
+            targetSideName: res.trapResult.summonerName,
+            targetLane: res.trapResult.summonSlotIndex,
+            actionTagText: `💥 召喚迎撃 ${res.trapResult.damage}ダメージ！`
+          });
+          ui.render();
+        }
       }
-      ui.render();
       break;
     }
 
@@ -69,11 +88,18 @@ async function handleUserAction(action, data) {
     }
 
     case 'cast-spell': {
+      const spellCard = gameState.player.hand.find(c => c.uid === data.cardUid);
+      const targetSide = data.target ? data.target.targetSide : null;
+      const targetLane = data.target ? data.target.slotIndex : null;
       const res = gameState.castSpell('player', data.cardUid, data.target);
       if (!res.success) {
         alert(res.reason);
+      } else {
+        if (targetSide && targetLane !== null && spellCard && spellCard.spellType === 'damage_monster') {
+          ui.playMonsterDamage(targetSide, targetLane, spellCard.value);
+        }
+        ui.render();
       }
-      ui.render();
       break;
     }
 

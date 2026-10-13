@@ -9,10 +9,12 @@ export class OpponentAI {
   /**
    * @param {GameState} gameState
    * @param {Function} updateUICallback
+   * @param {Function} onTrapTriggerCallback
    */
-  constructor(gameState, updateUICallback) {
+  constructor(gameState, updateUICallback, onTrapTriggerCallback = null) {
     this.gameState = gameState;
     this.updateUI = updateUICallback;
+    this.onTrapTrigger = onTrapTriggerCallback;
   }
 
   /**
@@ -75,6 +77,17 @@ export class OpponentAI {
           const res = gs.summonMonster('opponent', monsterToPlay.uid, targetSlot);
           if (res.success) {
             this.updateUI();
+            if (res.trapResult && res.trapResult.triggered && this.onTrapTrigger) {
+              await this.onTrapTrigger({
+                trap: res.trapResult.trap,
+                ownerSideName: res.trapResult.trapOwnerName,
+                slotIndex: res.trapResult.trapSlotIndex,
+                targetSideName: res.trapResult.summonerName,
+                targetLane: res.trapResult.summonSlotIndex,
+                actionTagText: `💥 召喚迎撃 ${res.trapResult.damage}ダメージ！`
+              });
+              this.updateUI();
+            }
             await sleep(700);
             actionTaken = true;
             continue;

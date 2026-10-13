@@ -360,20 +360,41 @@ html, body {
   box-shadow: 0 0 4px var(--accent-cyan);
 }
 
-/* ライフバー表示 */
+/* ライフ数値表示（バーゲージ廃止・数値専用ピルバッジ） */
 .life-display {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
-  max-width: 200px;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
-.life-header {
+.life-pill {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.player-life-container .life-pill {
+  border-color: rgba(0, 210, 255, 0.4);
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.15), rgba(5, 12, 25, 0.75));
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+}
+
+.opponent-life-container .life-pill {
+  border-color: rgba(239, 35, 60, 0.4);
+  background: linear-gradient(135deg, rgba(239, 35, 60, 0.15), rgba(25, 5, 10, 0.75));
+  box-shadow: 0 0 10px rgba(239, 35, 60, 0.2);
+}
+
+.life-heart-icon {
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .life-title {
@@ -381,38 +402,25 @@ html, body {
   font-weight: 900;
   font-size: 0.65rem;
   color: var(--text-muted);
+  letter-spacing: 0.5px;
 }
 
 .life-numbers {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.85rem;
+  font-weight: 900;
+  font-size: 0.95rem;
   white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 
-.life-bar-track {
-  flex: 1;
-  height: 7px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.player-life-container .life-numbers {
+  color: #90e0ef;
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.5);
 }
 
-.life-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.opponent-life-fill {
-  background: linear-gradient(90deg, #ff4d6d, var(--accent-ruby));
-  box-shadow: 0 0 6px rgba(239, 35, 60, 0.5);
-}
-
-.player-life-fill {
-  background: linear-gradient(90deg, #00b4d8, var(--accent-cyan));
-  box-shadow: 0 0 6px rgba(0, 210, 255, 0.5);
+.opponent-life-container .life-numbers {
+  color: #ff8fa3;
+  text-shadow: 0 0 8px rgba(239, 35, 60, 0.5);
 }
 
 /* プレイヤーHUD（敵・味方） */
@@ -1094,27 +1102,28 @@ html, body {
   animation: hit-shake 0.3s ease-in-out;
 }
 
-/* ダメージフロート数字 */
+/* ダメージフロート数字（プレイヤーおよびモンスター被ダメージ共通フライテキスト） */
 .floating-damage {
   position: absolute;
-  top: 30%;
+  top: 35%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 900;
-  color: #ff3366;
-  text-shadow: 0 0 8px rgba(255, 51, 102, 0.8), 0 2px 4px #000;
+  color: #ff2a5f;
+  text-shadow: 0 0 10px rgba(255, 42, 95, 0.9), 0 2px 4px #000, 0 0 2px #fff;
   pointer-events: none;
-  z-index: 100;
-  animation: float-damage-up 0.8s forwards;
+  z-index: 120;
+  white-space: nowrap;
+  animation: float-damage-up 0.85s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
 
 @keyframes float-damage-up {
-  0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); }
-  20% { opacity: 1; transform: translate(-50%, -10px) scale(1.2); }
-  80% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -30px) scale(0.8); }
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+  25% { opacity: 1; transform: translate(-50%, -12px) scale(1.3); }
+  75% { opacity: 1; transform: translate(-50%, -22px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -36px) scale(0.85); }
 }
 
 /* フェイズ通知オーバーレイ */
@@ -1340,8 +1349,8 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* iPhone等のスマートフォン縦画面（横幅480px以下）最適化 */
-@media (max-width: 480px) {
+/* スマートフォン縦画面（横幅640px以下）最適化 */
+@media (max-width: 640px) {
   .game-container {
     padding: 2px 4px;
     gap: 2px;
@@ -1388,16 +1397,30 @@ html, body {
   }
 
   .deck-pill {
-    display: none; /* スマホでは山札表示を省略しスリム化 */
+    display: none !important; /* スマホでは山札表示を省略しスリム化 */
   }
 
   .life-display {
-    max-width: 105px;
-    gap: 4px;
+    max-width: none;
+    gap: 0;
+    margin: 0 4px;
+  }
+
+  .life-pill {
+    padding: 2px 8px;
+    gap: 3px;
+  }
+
+  .life-heart-icon {
+    font-size: 0.72rem;
+  }
+
+  .life-title {
+    display: none; /* スマホでは「HP」文字を省略し❤️と数値でスマートに */
   }
 
   .life-numbers {
-    font-size: 0.78rem;
+    font-size: 0.85rem;
   }
 
   .btn-end-turn {
@@ -1440,6 +1463,200 @@ html, body {
   .slot {
     height: 100%;
     aspect-ratio: 1 / 1.4;
+  }
+
+  .trap-cutin-container {
+    max-width: 320px;
+    gap: 8px;
+  }
+  .trap-cutin-card {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .trap-cutin-art {
+    width: 48px;
+    height: 48px;
+    font-size: 2.2rem;
+  }
+  .trap-cutin-name {
+    font-size: 1rem;
+  }
+  .trap-cutin-desc {
+    font-size: 0.72rem;
+  }
+}
+
+/* ========================================================
+   トラップ発動カットイン演出（TRAP CUT-IN OVERLAY）
+   ======================================================== */
+.trap-cutin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.trap-cutin-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.trap-cutin-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(180, 20, 40, 0.5) 0%, rgba(5, 7, 15, 0.88) 80%);
+  backdrop-filter: blur(4px);
+  animation: pulse-trap-backdrop 0.8s infinite alternate;
+}
+
+@keyframes pulse-trap-backdrop {
+  0% { opacity: 0.85; }
+  100% { opacity: 1; }
+}
+
+.trap-cutin-container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 90%;
+  max-width: 380px;
+  transform: scale(0.7) translateY(20px);
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s ease;
+}
+
+.trap-cutin-overlay.active .trap-cutin-container {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+/* トラップ発動バッジ */
+.trap-cutin-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ef233c, #9d0208);
+  color: #fff;
+  padding: 4px 18px;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(239, 35, 60, 0.8), 0 4px 10px rgba(0, 0, 0, 0.6);
+  border: 1.5px solid #ff758f;
+  animation: trap-badge-bounce 0.6s ease infinite alternate;
+}
+
+@keyframes trap-badge-bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
+}
+
+.trap-badge-icon {
+  font-size: 1.1rem;
+}
+
+.trap-badge-text {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+/* トラップ発動カード本体 */
+.trap-cutin-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(145deg, #2b0b12, #140508);
+  border: 2px solid var(--type-trap-color);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 25px rgba(239, 35, 60, 0.5);
+  box-sizing: border-box;
+}
+
+.trap-cutin-art {
+  font-size: 2.8rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(239, 35, 60, 0.4);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 12px rgba(239, 35, 60, 0.4);
+}
+
+.trap-cutin-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  text-align: left;
+}
+
+.trap-cutin-owner {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ff8fa3;
+  letter-spacing: 0.5px;
+}
+
+.trap-cutin-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.trap-cutin-desc {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #f1faee;
+  margin: 0;
+}
+
+/* アクション・タグ（例: 🛡️ 攻撃を無効化！ / 💥 2ダメージ迎撃！） */
+.trap-cutin-action-tag {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--type-trap-color);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 4px 16px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(239, 35, 60, 0.5);
+}
+
+/* スロットのトラップ発動強調パルス */
+.slot.trap-activating {
+  animation: trap-slot-ignite 0.5s infinite alternate !important;
+  z-index: 50 !important;
+}
+
+@keyframes trap-slot-ignite {
+  0% {
+    box-shadow: 0 0 8px rgba(239, 35, 60, 0.6), inset 0 0 8px rgba(239, 35, 60, 0.5);
+    border-color: #ff4d6d;
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 24px rgba(239, 35, 60, 1), inset 0 0 16px rgba(239, 35, 60, 0.9);
+    border-color: #ffffff;
+    transform: scale(1.08);
   }
 }
 

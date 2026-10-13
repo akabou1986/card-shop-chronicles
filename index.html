@@ -62,14 +62,12 @@
           </div>
         </div>
 
-        <!-- 敵ライフバー -->
+        <!-- 敵HP数値表示 -->
         <div class="life-display opponent-life-container">
-          <div class="life-header">
+          <div class="life-pill">
+            <span class="life-heart-icon">❤️</span>
             <span class="life-title">HP</span>
             <span class="life-numbers" id="opponent-life-text">20 / 20</span>
-          </div>
-          <div class="life-bar-track">
-            <div class="life-bar-fill opponent-life-fill" id="opponent-life-bar" style="width: 100%;"></div>
           </div>
         </div>
       </section>
@@ -179,14 +177,12 @@
           </div>
         </div>
 
-        <!-- 自軍ライフバー -->
+        <!-- 自軍HP数値表示 -->
         <div class="life-display player-life-container">
-          <div class="life-header">
+          <div class="life-pill">
+            <span class="life-heart-icon">❤️</span>
             <span class="life-title">HP</span>
             <span class="life-numbers" id="player-life-text">20 / 20</span>
-          </div>
-          <div class="life-bar-track">
-            <div class="life-bar-fill player-life-fill" id="player-life-bar" style="width: 100%;"></div>
           </div>
         </div>
 
@@ -223,6 +219,26 @@
     <!-- 演出オーバーレイ（ダイレクトアタック、勝敗、フェイズ通知） -->
     <div class="phase-overlay" id="phase-overlay">
       <div class="phase-text" id="phase-text">BATTLE PHASE</div>
+    </div>
+
+    <!-- トラップ発動カットイン演出オーバーレイ -->
+    <div class="trap-cutin-overlay" id="trap-cutin-overlay">
+      <div class="trap-cutin-backdrop"></div>
+      <div class="trap-cutin-container">
+        <div class="trap-cutin-badge">
+          <span class="trap-badge-icon">⚠️</span>
+          <span class="trap-badge-text" id="trap-cutin-badge-text">TRAP TRIGGERED!</span>
+        </div>
+        <div class="trap-cutin-card">
+          <div class="trap-cutin-art" id="trap-cutin-art">🪞</div>
+          <div class="trap-cutin-details">
+            <div class="trap-cutin-owner" id="trap-cutin-owner">プレイヤーの伏せカード</div>
+            <h2 class="trap-cutin-name" id="trap-cutin-name">影の身代わり</h2>
+            <p class="trap-cutin-desc" id="trap-cutin-desc">相手の直接攻撃を無効化し、攻撃者に2反射ダメージ！</p>
+          </div>
+        </div>
+        <div class="trap-cutin-action-tag" id="trap-cutin-action-tag">🛡️ 攻撃を無効化！</div>
+      </div>
     </div>
 
     <!-- ゲーム終了モーダル -->
