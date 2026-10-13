@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>モンスターズ・クロニクル (TCG Prototype)</title>
+  <meta name="description" content="ブラウザで遊べる3レーン対面式スタンドアローンTCG「モンスターズ・クロニクル」のプロトタイプ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div id="app" class="game-container">
+    <!-- 背景エフェクト層 -->
+    <div class="ambient-glow bg-glow-top"></div>
+    <div class="ambient-glow bg-glow-bottom"></div>
+
+    <!-- ヘッダー / ゲームステータスバー -->
+    <header class="game-header">
+      <div class="game-logo">
+        <span class="logo-badge">PROTOTYPE</span>
+        <h1>MONSTERS CHRONICLE</h1>
+      </div>
+      <div class="turn-indicator-badge" id="turn-badge">
+        <span class="turn-count" id="turn-count-display">TURN 1</span>
+        <span class="turn-owner" id="turn-owner-display">PLAYER TURN</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-restart" class="btn-icon" title="リセット">↺</button>
+        <button id="btn-log-toggle" class="btn-icon" title="ログ切替">📜</button>
+      </div>
+    </header>
+
+    <!-- 対戦メイン盤面 -->
+    <main class="battlefield-wrapper">
+      
+      <!-- 敵プレイヤー情報バー -->
+      <section class="player-hud hud-opponent" id="opponent-hud">
+        <div class="player-profile">
+          <div class="avatar opponent-avatar">
+            <span class="avatar-icon">⚔️</span>
+            <span class="avatar-role">NPC</span>
+          </div>
+          <div class="player-meta">
+            <div class="player-name">ショップの挑戦者 (NPC)</div>
+            <div class="stats-row">
+              <div class="stat-pill mana-pill">
+                <span class="pill-label">MANA</span>
+                <span class="pill-val" id="opponent-mana">0/0</span>
+                <div class="mana-pips" id="opponent-mana-pips"></div>
+              </div>
+              <div class="stat-pill hand-pill">
+                <span class="pill-label">手札</span>
+                <span class="pill-val" id="opponent-hand-count">0</span>
+              </div>
+              <div class="stat-pill deck-pill">
+                <span class="pill-label">山札</span>
+                <span class="pill-val" id="opponent-deck-count">30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 敵ライフバー -->
+        <div class="life-display opponent-life-container">
+          <div class="life-header">
+            <span class="life-title">HP</span>
+            <span class="life-numbers" id="opponent-life-text">20 / 20</span>
+          </div>
+          <div class="life-bar-track">
+            <div class="life-bar-fill opponent-life-fill" id="opponent-life-bar" style="width: 100%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 敵フィールド（サポート後列 ＋ モンスター前列） -->
+      <section class="field-zone field-opponent">
+        <!-- 敵 サポート枠（トラップ・エンチャント） -->
+        <div class="support-row opponent-support-row">
+          <div class="slot-label-sticky">敵サポート</div>
+          <div class="lane-slots">
+            <div class="slot support-slot" id="opp-support-0" data-owner="opponent" data-type="support" data-index="0">
+              <span class="slot-placeholder">Support 1</span>
+            </div>
+            <div class="slot support-slot" id="opp-support-1" data-owner="opponent" data-type="support" data-index="1">
+              <span class="slot-placeholder">Support 2</span>
+            </div>
+            <div class="slot support-slot" id="opp-support-2" data-owner="opponent" data-type="support" data-index="2">
+              <span class="slot-placeholder">Support 3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 敵 モンスター枠（3レーン） -->
+        <div class="monster-row opponent-monster-row">
+          <div class="slot-label-sticky">敵モンスター</div>
+          <div class="lane-slots">
+            <div class="slot monster-slot" id="opp-monster-0" data-owner="opponent" data-type="monster" data-index="0">
+              <span class="slot-lane-indicator">LEFT</span>
+            </div>
+            <div class="slot monster-slot" id="opp-monster-1" data-owner="opponent" data-type="monster" data-index="1">
+              <span class="slot-lane-indicator">CENTER</span>
+            </div>
+            <div class="slot monster-slot" id="opp-monster-2" data-owner="opponent" data-type="monster" data-index="2">
+              <span class="slot-lane-indicator">RIGHT</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- センターコンフリクトライン（攻撃演出・レーンガイド） -->
+      <div class="battlefield-divider">
+        <div class="lane-guide guide-0"><span class="guide-arrow">⇅</span></div>
+        <div class="lane-guide guide-1"><span class="guide-arrow">⇅</span></div>
+        <div class="lane-guide guide-2"><span class="guide-arrow">⇅</span></div>
+        <div class="combat-status-badge" id="combat-banner">VS</div>
+      </div>
+
+      <!-- 自陣フィールド（モンスター前列 ＋ サポート後列） -->
+      <section class="field-zone field-player">
+        <!-- 自陣 モンスター枠（3レーン） -->
+        <div class="monster-row player-monster-row">
+          <div class="slot-label-sticky">味方モンスター</div>
+          <div class="lane-slots">
+            <div class="slot monster-slot" id="player-monster-0" data-owner="player" data-type="monster" data-index="0">
+              <span class="slot-lane-indicator">LEFT</span>
+            </div>
+            <div class="slot monster-slot" id="player-monster-1" data-owner="player" data-type="monster" data-index="1">
+              <span class="slot-lane-indicator">CENTER</span>
+            </div>
+            <div class="slot monster-slot" id="player-monster-2" data-owner="player" data-type="monster" data-index="2">
+              <span class="slot-lane-indicator">RIGHT</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 自陣 サポート枠（トラップ・エンチャント） -->
+        <div class="support-row player-support-row">
+          <div class="slot-label-sticky">味方サポート</div>
+          <div class="lane-slots">
+            <div class="slot support-slot" id="player-support-0" data-owner="player" data-type="support" data-index="0">
+              <span class="slot-placeholder">Trap/Enchant</span>
+            </div>
+            <div class="slot support-slot" id="player-support-1" data-owner="player" data-type="support" data-index="1">
+              <span class="slot-placeholder">Trap/Enchant</span>
+            </div>
+            <div class="slot support-slot" id="player-support-2" data-owner="player" data-type="support" data-index="2">
+              <span class="slot-placeholder">Trap/Enchant</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- プレイヤー情報バー & アクションコントロール -->
+      <section class="player-hud hud-player" id="player-hud">
+        <div class="player-profile">
+          <div class="avatar player-avatar">
+            <span class="avatar-icon">👑</span>
+            <span class="avatar-role">YOU</span>
+          </div>
+          <div class="player-meta">
+            <div class="player-name">プレイヤー (YOU)</div>
+            <div class="stats-row">
+              <div class="stat-pill mana-pill player-mana-badge">
+                <span class="pill-label">MANA</span>
+                <span class="pill-val" id="player-mana">0/0</span>
+                <div class="mana-pips" id="player-mana-pips"></div>
+              </div>
+              <div class="stat-pill hand-pill">
+                <span class="pill-label">手札</span>
+                <span class="pill-val" id="player-hand-count">0</span>
+              </div>
+              <div class="stat-pill deck-pill">
+                <span class="pill-label">山札</span>
+                <span class="pill-val" id="player-deck-count">30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 自軍ライフバー -->
+        <div class="life-display player-life-container">
+          <div class="life-header">
+            <span class="life-title">HP</span>
+            <span class="life-numbers" id="player-life-text">20 / 20</span>
+          </div>
+          <div class="life-bar-track">
+            <div class="life-bar-fill player-life-fill" id="player-life-bar" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- ターン終了ボタン -->
+        <div class="turn-action-box">
+          <button id="btn-end-turn" class="btn-end-turn">
+            <span class="btn-text">ターン終了</span>
+            <span class="btn-subtext">戦闘フェイズへ</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 手札エリア -->
+      <section class="hand-section">
+        <div class="hand-header">
+          <span class="hand-title">HAND CARDS</span>
+          <span class="hand-hint" id="hand-hint-text">カードをタップで選択（詳細表示・長押しで拡大）</span>
+        </div>
+        <div class="hand-cards-container" id="player-hand-cards">
+          <!-- 動的に手札カードがレンダリングされます -->
+        </div>
+      </section>
+    </main>
+
+    <!-- ログドロワー / パネル（折りたたみ可能） -->
+    <aside class="battle-log-panel" id="battle-log-panel">
+      <div class="log-panel-header">
+        <h3>バトルログ</h3>
+        <button id="btn-close-log" class="btn-close-panel">✕</button>
+      </div>
+      <div class="log-entries" id="log-entries"></div>
+    </aside>
+
+    <!-- 演出オーバーレイ（ダイレクトアタック、勝敗、フェイズ通知） -->
+    <div class="phase-overlay" id="phase-overlay">
+      <div class="phase-text" id="phase-text">BATTLE PHASE</div>
+    </div>
+
+    <!-- ゲーム終了モーダル -->
+    <div class="modal-backdrop" id="game-end-modal">
+      <div class="modal-card">
+        <div class="modal-icon" id="game-end-icon">🏆</div>
+        <h2 class="modal-title" id="game-end-title">VICTORY!</h2>
+        <p class="modal-desc" id="game-end-desc">相手プレイヤーのライフを0にしました！</p>
+        <div class="modal-buttons">
+          <button id="btn-play-again" class="btn-primary">もう一度対戦する</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- カード詳細拡大表示モーダル（モバイル対応） -->
+    <div class="modal-backdrop" id="card-detail-modal">
+      <div class="modal-card detail-modal-card">
+        <div class="detail-card-header">
+          <span class="detail-cost-badge" id="detail-card-cost">1</span>
+          <h3 class="detail-card-title" id="detail-card-name">カード名</h3>
+          <span class="detail-type-badge" id="detail-card-type">MONSTER</span>
+        </div>
+        <div class="detail-art-box" id="detail-card-art">👾</div>
+        <p class="detail-card-desc" id="detail-card-desc">カードの効果説明文</p>
+        <div class="detail-card-stats" id="detail-card-stats">
+          <span class="detail-stat-pill" id="detail-card-atk">⚔️ ATK: 2</span>
+          <span class="detail-stat-pill" id="detail-card-hp">❤️ HP: 3</span>
+        </div>
+        <button id="btn-close-detail" class="btn-primary" style="margin-top:12px; width:100%;">閉じる</button>
+      </div>
+    </div>
+
+    <!-- カード詳細/ターゲット選択モーダル（スペル用など） -->
+    <div class="modal-backdrop" id="target-modal">
+      <div class="modal-card">
+        <h3 class="modal-title">対象を選択してください</h3>
+        <div class="target-options" id="target-options"></div>
+        <button id="btn-cancel-target" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
