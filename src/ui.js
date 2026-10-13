@@ -121,7 +121,14 @@ export class UIManager {
     if (!card) return;
     this.detailCardCost.textContent = card.cost ?? '-';
     this.detailCardName.textContent = card.name || 'カード';
-    this.detailCardType.textContent = (card.type || '').toUpperCase();
+    const typeLabels = {
+      monster: 'MONSTER (茶)',
+      spell: 'SPELL (青)',
+      trap: 'TRAP (赤)',
+      enchant: 'ENCHANT (緑)'
+    };
+    this.detailCardType.textContent = typeLabels[card.type] || (card.type || '').toUpperCase();
+    this.detailCardType.className = `detail-type-badge badge-${card.type}`;
     this.detailCardArt.textContent = card.emoji || '👾';
     this.detailCardDesc.textContent = card.desc || '効果なし';
 
@@ -354,7 +361,7 @@ export class UIManager {
       const stateClass = cardData.isRested ? 'rested-state' : 'active-state';
 
       slot.innerHTML = `
-        <div class="card-view ${stateClass}" title="${cardData.name} (コスト:${cardData.cost})\n${cardData.desc}">
+        <div class="card-view card-type-monster ${stateClass}" title="${cardData.name} (コスト:${cardData.cost})\n${cardData.desc}">
           <div class="card-header-bar">
             <span class="card-cost-badge">${cardData.cost}</span>
             <span class="card-name-text">${cardData.name}</span>
@@ -369,8 +376,9 @@ export class UIManager {
     } else {
       // サポート枠（トラップ/エンチャント）
       const isOpponent = owner === 'opponent';
+      const cardTypeClass = cardData.type === 'enchant' ? 'card-type-enchant' : 'card-type-trap';
       slot.innerHTML = `
-        <div class="card-view support-card-view" title="${isOpponent ? '相手の伏せカード' : `${cardData.name} (コスト:${cardData.cost})\n${cardData.desc}`}">
+        <div class="card-view support-card-view ${cardTypeClass}" title="${isOpponent ? '相手の伏せカード' : `${cardData.name} (コスト:${cardData.cost})\n${cardData.desc}`}">
           <div class="card-header-bar">
             <span class="card-cost-badge">${isOpponent ? '?' : cardData.cost}</span>
             <span class="card-name-text">${isOpponent ? '伏せカード' : cardData.name}</span>
@@ -393,7 +401,7 @@ export class UIManager {
       const canAfford = p.mana >= card.cost;
       const isSelected = this.selectedHandCard && this.selectedHandCard.uid === card.uid;
 
-      const typeClass = card.type === 'spell' ? 'type-spell' : card.type === 'trap' ? 'type-trap' : 'type-monster';
+      const typeClass = card.type === 'spell' ? 'type-spell' : card.type === 'trap' ? 'type-trap' : card.type === 'enchant' ? 'type-enchant' : 'type-monster';
       cardEl.className = `hand-card-item ${typeClass} ${isSelected ? 'selected' : ''} ${!canAfford ? 'unplayable' : ''}`;
       cardEl.setAttribute('data-uid', card.uid);
       cardEl.setAttribute('title', `${card.name} (コスト:${card.cost})\n${card.desc}`);

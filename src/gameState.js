@@ -24,7 +24,7 @@ export class GameState {
       mana: 1,
       maxMana: 1,
       hand: [],
-      deck: createStarterDeck(),
+      deck: createStarterDeck(true),
       graveyard: [],
       monsterSlots: [null, null, null], // [左, 中, 右]
       supportSlots: [null, null, null]  // [サポート1, 2, 3]

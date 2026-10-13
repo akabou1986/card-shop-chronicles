@@ -137,27 +137,52 @@ export const MASTER_CARDS = [
     trigger: 'on_enemy_summon',
     effect: 'damage_summon',
     value: 2
+  },
+
+  // --- エンチャント (永続効果カード・緑色) ---
+  {
+    id: 'e_vitality',
+    name: '生命の祭壇',
+    type: CARD_TYPES.ENCHANT,
+    cost: 2,
+    emoji: '🌿',
+    desc: '【常在型】サポート枠に永続設置。自陣を癒やす聖なる祭壇。',
+    effect: 'aura_vitality',
+    value: 1
+  },
+  {
+    id: 'e_war_banner',
+    name: '剛力の軍旗',
+    type: CARD_TYPES.ENCHANT,
+    cost: 3,
+    emoji: '🚩',
+    desc: '【常在型】サポート枠に永続設置。味方の士気を高める象徴。',
+    effect: 'aura_strength',
+    value: 1
   }
 ];
 
 /**
  * 30枚の初期プロトタイプデッキを生成
+ * @param {boolean} ensureTypeVariety 初手で全カードタイプ(茶/青/赤/緑)が確認できるよう末尾に各タイプを配置するか
  */
-export function createStarterDeck() {
+export function createStarterDeck(ensureTypeVariety = false) {
   const deck = [];
   // 各カードをバランスよく30枚になるよう配分
   const distribution = [
-    { id: 'm_goblin', count: 4 },
-    { id: 'm_sentry', count: 4 },
-    { id: 'm_mage', count: 4 },
+    { id: 'm_goblin', count: 3 },
+    { id: 'm_sentry', count: 3 },
+    { id: 'm_mage', count: 3 },
     { id: 'm_knight', count: 3 },
-    { id: 'm_drake', count: 3 },
+    { id: 'm_drake', count: 2 },
     { id: 'm_golem', count: 2 },
     { id: 'm_dragon', count: 2 },
     { id: 's_fireball', count: 3 },
     { id: 's_heal', count: 2 },
     { id: 't_mirror', count: 2 },
-    { id: 't_trap_mine', count: 1 }
+    { id: 't_trap_mine', count: 2 },
+    { id: 'e_vitality', count: 2 },
+    { id: 'e_war_banner', count: 1 }
   ];
 
   let uidCounter = 1;
@@ -178,6 +203,20 @@ export function createStarterDeck() {
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  // 初手で各カードタイプ（モンスター:茶, スペル:青, トラップ:赤, エンチャント:緑）が引けるよう末尾を調整
+  if (ensureTypeVariety) {
+    const requiredTypes = [CARD_TYPES.MONSTER, CARD_TYPES.SPELL, CARD_TYPES.TRAP, CARD_TYPES.ENCHANT];
+    const pickedCards = [];
+    for (const type of requiredTypes) {
+      const idx = deck.findIndex(c => c.type === type && !pickedCards.includes(c));
+      if (idx !== -1) {
+        pickedCards.push(deck.splice(idx, 1)[0]);
+      }
+    }
+    // pop()で引くため末尾に追加
+    deck.push(...pickedCards);
   }
 
   return deck;
